@@ -1,0 +1,1152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<title>Our House Move</title>
+<style>
+  :root{
+    --green-dark:#1A3C2E;
+    --green:#2E7D52;
+    --green-mid:#3D9466;
+    --green-light:#EAF4EE;
+    --green-line:#C8DDD0;
+    --pink:#D4447A;
+    --pink-light:#FAEDF3;
+    --pink-line:#F0C2D4;
+    --paper:#F2F7F4;
+    --surface:#FFFFFF;
+    --ink:#14271E;
+    --ink-soft:#5A7265;
+    --line:#E2EAE5;
+    --urgent:#C0392B;
+    --urgent-tint:#FBEAE7;
+    --high:#C47B1A;
+    --high-tint:#FDF3E3;
+    --shadow-sm:0 1px 3px rgba(20,39,30,0.08);
+    --shadow:0 2px 10px rgba(20,39,30,0.10);
+    --radius:12px;
+    --radius-sm:8px;
+  }
+
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;
+    -webkit-font-smoothing:antialiased;
+    min-height:100vh;
+    padding-bottom:100px;
+  }
+
+  /* ===== Header ===== */
+  .header{
+    background:var(--green-dark);
+    color:#fff;
+    padding:18px 20px 0;
+    position:sticky;
+    top:0;
+    z-index:50;
+    box-shadow:0 2px 12px rgba(20,39,30,0.18);
+  }
+
+  .header-top{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    margin-bottom:16px;
+  }
+
+  .header-title{
+    display:flex;
+    flex-direction:column;
+  }
+
+  .header-title h1{
+    margin:0;
+    font-size:19px;
+    font-weight:700;
+    letter-spacing:-0.01em;
+    color:#fff;
+  }
+
+  .header-title .subtitle{
+    font-size:12px;
+    color:rgba(255,255,255,0.6);
+    margin-top:2px;
+  }
+
+  .header-stats{
+    display:flex;
+    gap:16px;
+  }
+
+  .hstat{
+    text-align:center;
+  }
+  .hstat .n{
+    font-size:20px;
+    font-weight:700;
+    display:block;
+    line-height:1;
+    font-family:'JetBrains Mono','Courier New',monospace;
+  }
+  .hstat .l{
+    font-size:10px;
+    color:rgba(255,255,255,0.55);
+    display:block;
+    margin-top:2px;
+  }
+  .hstat.flag .n{ color:#FF8A80; }
+
+  /* ===== Owner filter tabs ===== */
+  .owner-tabs{
+    display:flex;
+    gap:0;
+    margin:0 -20px;
+    border-top:1px solid rgba(255,255,255,0.1);
+  }
+
+  .otab{
+    flex:1;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:7px;
+    padding:12px 8px;
+    font-size:13px;
+    font-weight:600;
+    color:rgba(255,255,255,0.55);
+    cursor:pointer;
+    border-bottom:3px solid transparent;
+    transition:all 0.15s ease;
+    user-select:none;
+  }
+  .otab.active{
+    color:#fff;
+  }
+  .otab[data-owner="all"].active{ border-bottom-color:rgba(255,255,255,0.7); }
+  .otab[data-owner="jake"].active{ border-bottom-color:var(--green-mid); color:#7DEBA8; }
+  .otab[data-owner="issy"].active{ border-bottom-color:var(--pink); color:#FFB3D1; }
+
+  .oavatar{
+    width:26px; height:26px;
+    border-radius:50%;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:12px;
+    font-weight:700;
+    flex-shrink:0;
+  }
+  .oavatar.jake{ background:var(--green-mid); color:#fff; }
+  .oavatar.issy{ background:var(--pink); color:#fff; }
+  .oavatar.all{ background:rgba(255,255,255,0.15); color:#fff; font-size:14px; }
+
+  /* ===== Main ===== */
+  main{
+    padding:20px 16px 0;
+    max-width:640px;
+    margin:0 auto;
+  }
+
+  /* ===== Add task FAB ===== */
+  .fab{
+    position:fixed;
+    bottom:24px;
+    right:20px;
+    width:56px; height:56px;
+    border-radius:50%;
+    background:var(--green-dark);
+    color:#fff;
+    font-size:26px;
+    border:none;
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    box-shadow:0 4px 16px rgba(20,39,30,0.28);
+    z-index:40;
+    transition:transform 0.15s ease, background 0.15s ease;
+  }
+  .fab:hover{ transform:scale(1.06); background:var(--green); }
+  .fab:active{ transform:scale(0.96); }
+
+  /* ===== Section headers ===== */
+  .section-head{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    margin:22px 0 10px;
+  }
+  .section-head:first-child{ margin-top:0; }
+
+  .section-label{
+    font-size:11.5px;
+    font-weight:700;
+    text-transform:uppercase;
+    letter-spacing:0.05em;
+    color:var(--ink-soft);
+  }
+
+  .section-line{
+    flex:1;
+    height:1px;
+    background:var(--line);
+  }
+
+  .section-count{
+    font-size:11px;
+    font-weight:600;
+    color:var(--ink-soft);
+    font-family:'JetBrains Mono','Courier New',monospace;
+  }
+
+  .section-head.overdue .section-label{ color:var(--urgent); }
+  .section-head.overdue .section-line{ background:var(--urgent); opacity:0.3; }
+
+  /* ===== Task card ===== */
+  .card{
+    background:var(--surface);
+    border-radius:var(--radius);
+    box-shadow:var(--shadow-sm);
+    display:flex;
+    align-items:stretch;
+    margin-bottom:8px;
+    overflow:hidden;
+    transition:box-shadow 0.15s ease;
+    cursor:pointer;
+  }
+  .card:active{ box-shadow:none; transform:scale(0.99); }
+
+  .card-rail{
+    width:5px;
+    flex-shrink:0;
+  }
+  .card-rail.jake{ background:var(--green); }
+  .card-rail.issy{ background:var(--pink); }
+  .card-rail.both{
+    background:linear-gradient(180deg, var(--green) 50%, var(--pink) 50%);
+  }
+
+  .card-check{
+    flex-shrink:0;
+    width:48px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+  }
+
+  .ccheck{
+    width:22px; height:22px;
+    border-radius:50%;
+    border:2px solid var(--line);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    flex-shrink:0;
+    transition:all 0.15s ease;
+    cursor:pointer;
+  }
+  .ccheck.checked{
+    background:var(--green);
+    border-color:var(--green);
+    color:#fff;
+  }
+  .ccheck .tick{ display:none; font-size:13px; line-height:1; }
+  .ccheck.checked .tick{ display:block; }
+
+  .card-body{
+    flex:1;
+    padding:13px 10px 13px 4px;
+    min-width:0;
+  }
+
+  .card-title{
+    font-size:14.5px;
+    font-weight:600;
+    line-height:1.3;
+    margin-bottom:5px;
+  }
+  .card.done .card-title{
+    text-decoration:line-through;
+    color:var(--ink-soft);
+  }
+
+  .card-meta{
+    display:flex;
+    align-items:center;
+    gap:6px;
+    flex-wrap:wrap;
+  }
+
+  .owner-chip{
+    display:inline-flex;
+    align-items:center;
+    gap:4px;
+    font-size:11px;
+    font-weight:600;
+    padding:2px 7px;
+    border-radius:10px;
+  }
+  .owner-chip.jake{ background:var(--green-light); color:var(--green); }
+  .owner-chip.issy{ background:var(--pink-light); color:var(--pink); }
+  .owner-chip.both{
+    background:linear-gradient(90deg, var(--green-light), var(--pink-light));
+    color:var(--ink-soft);
+  }
+  .owner-dot{
+    width:5px; height:5px;
+    border-radius:50%;
+    flex-shrink:0;
+  }
+  .owner-chip.jake .owner-dot{ background:var(--green); }
+  .owner-chip.issy .owner-dot{ background:var(--pink); }
+  .owner-chip.both .owner-dot{ display:none; }
+
+  .pchip{
+    font-size:10.5px;
+    font-weight:600;
+    padding:2px 7px;
+    border-radius:10px;
+  }
+  .pchip.urgent{ background:var(--urgent-tint); color:var(--urgent); }
+  .pchip.high{ background:var(--high-tint); color:var(--high); }
+  .pchip.medium{ background:var(--green-light); color:var(--green); }
+  .pchip.low{ background:var(--line); color:var(--ink-soft); }
+
+  .card-notes{
+    font-size:12.5px;
+    color:var(--ink-soft);
+    margin-top:4px;
+    line-height:1.4;
+    display:-webkit-box;
+    -webkit-line-clamp:2;
+    -webkit-box-orient:vertical;
+    overflow:hidden;
+  }
+
+  .card-right{
+    flex-shrink:0;
+    padding:13px 14px 13px 6px;
+    display:flex;
+    flex-direction:column;
+    align-items:flex-end;
+    justify-content:center;
+    gap:3px;
+  }
+
+  .due-date{
+    font-family:'JetBrains Mono','Courier New',monospace;
+    font-size:12.5px;
+    font-weight:700;
+    white-space:nowrap;
+  }
+  .due-date.over{ color:var(--urgent); }
+  .due-date.soon{ color:var(--high); }
+
+  .due-label{
+    font-size:10px;
+    color:var(--ink-soft);
+    white-space:nowrap;
+  }
+
+  /* Done card styling */
+  .card.done{
+    opacity:0.6;
+  }
+
+  /* ===== Completed section ===== */
+  .completed-toggle{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    padding:12px 0 6px;
+    cursor:pointer;
+    background:none;
+    border:none;
+    font-family:inherit;
+    width:100%;
+  }
+  .completed-toggle .cl{ font-size:12px; font-weight:700; color:var(--ink-soft); text-transform:uppercase; letter-spacing:0.04em; }
+  .completed-toggle .cc{ font-size:11px; color:var(--ink-soft); font-family:'JetBrains Mono',monospace; background:var(--line); padding:1px 7px; border-radius:8px; }
+  .completed-toggle .cchev{ font-size:10px; color:var(--ink-soft); margin-left:auto; }
+  .completed-section-line{ flex:1; height:1px; background:var(--line); }
+
+  /* ===== Empty state ===== */
+  .empty{
+    text-align:center;
+    padding:40px 20px;
+    color:var(--ink-soft);
+    font-size:14px;
+  }
+  .empty .emoji{ font-size:36px; display:block; margin-bottom:10px; }
+
+  /* ===== Live indicator ===== */
+  .live-dot{
+    position:fixed;
+    top:14px;
+    right:16px;
+    display:flex;
+    align-items:center;
+    gap:5px;
+    font-size:10.5px;
+    color:rgba(255,255,255,0.6);
+    z-index:60;
+    pointer-events:none;
+  }
+  .live-dot .dot{
+    width:7px; height:7px;
+    border-radius:50%;
+    background:#4CAF50;
+    box-shadow:0 0 0 0 rgba(76,175,80,0.4);
+    animation:pulse 2s infinite;
+  }
+  .live-dot .dot.off{ background:#FF7043; animation:none; }
+  @keyframes pulse{
+    0%{ box-shadow:0 0 0 0 rgba(76,175,80,0.4); }
+    70%{ box-shadow:0 0 0 6px rgba(76,175,80,0); }
+    100%{ box-shadow:0 0 0 0 rgba(76,175,80,0); }
+  }
+
+  /* ===== Modal / Drawer ===== */
+  .modal-overlay{
+    position:fixed; inset:0;
+    background:rgba(20,39,30,0.5);
+    display:none;
+    align-items:flex-end;
+    justify-content:center;
+    z-index:100;
+    padding:0;
+  }
+  .modal-overlay.show{ display:flex; }
+
+  .modal{
+    background:var(--surface);
+    border-radius:20px 20px 0 0;
+    width:100%;
+    max-width:640px;
+    max-height:92vh;
+    overflow-y:auto;
+    padding-bottom:env(safe-area-inset-bottom, 20px);
+    box-shadow:0 -8px 40px rgba(20,39,30,0.2);
+  }
+
+  .modal-handle{
+    width:40px; height:4px;
+    background:var(--line);
+    border-radius:2px;
+    margin:12px auto 0;
+  }
+
+  .modal-head{
+    padding:16px 20px 12px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    border-bottom:1px solid var(--line);
+  }
+  .modal-head h3{
+    margin:0;
+    font-size:17px;
+    font-weight:700;
+    color:var(--ink);
+  }
+  .modal-close{
+    width:32px; height:32px;
+    border-radius:50%;
+    background:var(--line);
+    border:none;
+    cursor:pointer;
+    font-size:16px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    color:var(--ink-soft);
+  }
+
+  .modal-body{
+    padding:20px;
+    display:flex;
+    flex-direction:column;
+    gap:16px;
+  }
+
+  .field label{
+    display:block;
+    font-size:12px;
+    font-weight:700;
+    color:var(--ink-soft);
+    margin-bottom:7px;
+    text-transform:uppercase;
+    letter-spacing:0.03em;
+  }
+
+  .field input[type=text], .field input[type=date], .field textarea{
+    width:100%;
+    font-family:inherit;
+    font-size:15px;
+    padding:12px 14px;
+    border:1.5px solid var(--line);
+    border-radius:var(--radius-sm);
+    background:var(--paper);
+    color:var(--ink);
+    -webkit-appearance:none;
+  }
+  .field input:focus, .field textarea:focus{
+    outline:none;
+    border-color:var(--green);
+    box-shadow:0 0 0 3px rgba(46,125,82,0.12);
+  }
+  .field textarea{ resize:none; min-height:72px; line-height:1.4; }
+
+  /* Owner selector */
+  .owner-pick{
+    display:grid;
+    grid-template-columns:1fr 1fr 1fr;
+    gap:8px;
+  }
+  .opick{
+    padding:10px 8px;
+    border:2px solid var(--line);
+    border-radius:var(--radius-sm);
+    cursor:pointer;
+    text-align:center;
+    font-size:13px;
+    font-weight:600;
+    color:var(--ink-soft);
+    transition:all 0.12s ease;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:6px;
+  }
+  .opick .opick-av{
+    width:32px; height:32px;
+    border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    font-size:14px; font-weight:700; color:#fff;
+  }
+  .opick.jake .opick-av{ background:var(--green); }
+  .opick.issy .opick-av{ background:var(--pink); }
+  .opick.both .opick-av{ background:linear-gradient(135deg, var(--green) 50%, var(--pink) 50%); font-size:16px; }
+
+  .opick.sel-jake{ border-color:var(--green); background:var(--green-light); color:var(--green); }
+  .opick.sel-issy{ border-color:var(--pink); background:var(--pink-light); color:var(--pink); }
+  .opick.sel-both{ border-color:var(--ink-soft); background:var(--line); color:var(--ink); }
+
+  /* Priority selector */
+  .priority-pick{
+    display:grid;
+    grid-template-columns:1fr 1fr 1fr 1fr;
+    gap:6px;
+  }
+  .ppick{
+    padding:9px 4px;
+    border:1.5px solid var(--line);
+    border-radius:var(--radius-sm);
+    cursor:pointer;
+    text-align:center;
+    font-size:12px;
+    font-weight:600;
+    color:var(--ink-soft);
+    transition:all 0.12s ease;
+  }
+  .ppick.sel-urgent{ border-color:var(--urgent); background:var(--urgent-tint); color:var(--urgent); }
+  .ppick.sel-high{ border-color:var(--high); background:var(--high-tint); color:var(--high); }
+  .ppick.sel-medium{ border-color:var(--green); background:var(--green-light); color:var(--green); }
+  .ppick.sel-low{ border-color:var(--ink-soft); background:var(--line); color:var(--ink-soft); }
+
+  .modal-foot{
+    padding:12px 20px 20px;
+    display:flex;
+    gap:10px;
+    border-top:1px solid var(--line);
+    position:sticky;
+    bottom:0;
+    background:var(--surface);
+  }
+
+  .btn{
+    font-family:inherit;
+    font-size:15px;
+    font-weight:700;
+    border:none;
+    padding:14px 20px;
+    border-radius:var(--radius-sm);
+    cursor:pointer;
+    transition:opacity 0.15s ease;
+    flex:1;
+  }
+  .btn:active{ opacity:0.8; transform:scale(0.98); }
+  .btn.primary{ background:var(--green-dark); color:#fff; }
+  .btn.secondary{ background:var(--line); color:var(--ink); }
+  .btn.danger{ background:var(--urgent-tint); color:var(--urgent); flex:0; padding:14px 18px; }
+
+  /* ===== Toast ===== */
+  .toast{
+    position:fixed;
+    bottom:90px;
+    left:50%;
+    transform:translateX(-50%) translateY(20px);
+    background:var(--green-dark);
+    color:#fff;
+    padding:10px 18px;
+    border-radius:20px;
+    font-size:13.5px;
+    font-weight:500;
+    box-shadow:var(--shadow);
+    opacity:0;
+    transition:all 0.25s ease;
+    pointer-events:none;
+    z-index:200;
+    white-space:nowrap;
+  }
+  .toast.show{
+    opacity:1;
+    transform:translateX(-50%) translateY(0);
+  }
+
+  /* ===== Loading ===== */
+  .loading{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    padding:60px 20px;
+    gap:14px;
+    color:var(--ink-soft);
+    font-size:14px;
+  }
+
+  .spinner{
+    width:32px; height:32px;
+    border:3px solid var(--line);
+    border-top-color:var(--green);
+    border-radius:50%;
+    animation:spin 0.8s linear infinite;
+  }
+  @keyframes spin{ to{ transform:rotate(360deg); } }
+
+  @media (prefers-reduced-motion: reduce){
+    *{ transition:none !important; animation:none !important; }
+  }
+</style>
+</head>
+<body>
+
+<div class="live-dot" id="liveDot">
+  <span class="dot" id="liveIndicator"></span>
+  <span id="liveText">Live</span>
+</div>
+
+<div class="header">
+  <div class="header-top">
+    <div class="header-title">
+      <h1>🏠 Our House Move</h1>
+      <span class="subtitle" id="headerDate">—</span>
+    </div>
+    <div class="header-stats">
+      <div class="hstat flag">
+        <span class="n" id="stat-overdue">0</span>
+        <span class="l">Overdue</span>
+      </div>
+      <div class="hstat">
+        <span class="n" id="stat-open">0</span>
+        <span class="l">Open</span>
+      </div>
+    </div>
+  </div>
+  <div class="owner-tabs">
+    <div class="otab active" data-owner="all">
+      <span class="oavatar all">☰</span>
+      <span>All</span>
+    </div>
+    <div class="otab" data-owner="jake">
+      <span class="oavatar jake">J</span>
+      <span>Jake</span>
+    </div>
+    <div class="otab" data-owner="issy">
+      <span class="oavatar issy">I</span>
+      <span>Issy</span>
+    </div>
+  </div>
+</div>
+
+<main id="main">
+  <div class="loading" id="loadingState">
+    <div class="spinner"></div>
+    <span>Loading tasks…</span>
+  </div>
+</main>
+
+<button class="fab" id="fabBtn" title="Add task">+</button>
+
+<!-- Modal -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal" id="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-head">
+      <h3 id="modalTitle">New Task</h3>
+      <button class="modal-close" id="modalClose">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="field">
+        <label>Task</label>
+        <input type="text" id="f-title" placeholder="e.g. Book removal company" autocomplete="off">
+      </div>
+      <div class="field">
+        <label>Notes (optional)</label>
+        <textarea id="f-notes" placeholder="Any extra details…"></textarea>
+      </div>
+      <div class="field">
+        <label>Whose action</label>
+        <div class="owner-pick">
+          <div class="opick jake" data-o="jake">
+            <span class="opick-av">J</span>
+            <span>Jake</span>
+          </div>
+          <div class="opick issy" data-o="issy">
+            <span class="opick-av">I</span>
+            <span>Issy</span>
+          </div>
+          <div class="opick both" data-o="both">
+            <span class="opick-av">✦</span>
+            <span>Both</span>
+          </div>
+        </div>
+      </div>
+      <div class="field">
+        <label>Priority</label>
+        <div class="priority-pick">
+          <div class="ppick" data-p="urgent">Urgent</div>
+          <div class="ppick" data-p="high">High</div>
+          <div class="ppick" data-p="medium">Medium</div>
+          <div class="ppick" data-p="low">Low</div>
+        </div>
+      </div>
+      <div class="field">
+        <label>Due date</label>
+        <input type="date" id="f-due">
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn danger" id="deleteBtn" style="display:none">🗑</button>
+      <button class="btn secondary" id="cancelBtn">Cancel</button>
+      <button class="btn primary" id="saveBtn">Save task</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+  const SUPABASE_URL = 'https://gvwrueelxnvlqyxtxfth.supabase.co';
+  const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd2d3J1ZWVseG52bHF5eHR4ZnRoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI4NjQ5NDAsImV4cCI6MjA5ODQ0MDk0MH0.I760BEa784ao8OIHfm-0diiJz8DtP9O3Incdyha2o68';
+  const TABLE = 'house_tasks';
+  const API = `${SUPABASE_URL}/rest/v1/${TABLE}`;
+  const REALTIME = `${SUPABASE_URL}/realtime/v1/websocket`;
+
+  const headers = {
+    'apikey': SUPABASE_KEY,
+    'Authorization': `Bearer ${SUPABASE_KEY}`,
+    'Content-Type': 'application/json',
+    'Prefer': 'return=representation'
+  };
+
+  let tasks = [];
+  let ownerFilter = 'all';
+  let editingId = null;
+  let selectedOwner = 'jake';
+  let selectedPriority = 'medium';
+  let completedExpanded = false;
+  let ws = null;
+
+  // ===== Supabase helpers =====
+  async function fetchTasks(){
+    try{
+      const res = await fetch(`${API}?order=due_date.asc.nullslast,created_at.asc`, { headers });
+      if(!res.ok) throw new Error(await res.text());
+      tasks = await res.json();
+      render();
+      setLive(true);
+    }catch(e){
+      console.error('Fetch failed:', e);
+      setLive(false);
+      document.getElementById('main').innerHTML = `<div class="empty"><span class="emoji">⚠️</span>Couldn't load tasks. Check your connection.</div>`;
+    }
+  }
+
+  async function upsertTask(task){
+    const method = task.id ? 'PATCH' : 'POST';
+    const url = task.id ? `${API}?id=eq.${task.id}` : API;
+    const body = { ...task };
+    if(task.id) delete body.id;
+    body.updated_at = new Date().toISOString();
+    try{
+      const res = await fetch(url, { method, headers, body: JSON.stringify(body) });
+      if(!res.ok) throw new Error(await res.text());
+      return true;
+    }catch(e){
+      console.error('Save failed:', e);
+      showToast('Save failed — check connection');
+      return false;
+    }
+  }
+
+  async function deleteTask(id){
+    try{
+      const res = await fetch(`${API}?id=eq.${id}`, { method:'DELETE', headers });
+      if(!res.ok) throw new Error(await res.text());
+      return true;
+    }catch(e){
+      console.error('Delete failed:', e);
+      showToast('Delete failed — check connection');
+      return false;
+    }
+  }
+
+  async function toggleDone(id, done){
+    try{
+      const res = await fetch(`${API}?id=eq.${id}`, {
+        method:'PATCH',
+        headers,
+        body: JSON.stringify({ done, done_at: done ? new Date().toISOString() : null, updated_at: new Date().toISOString() })
+      });
+      if(!res.ok) throw new Error(await res.text());
+    }catch(e){
+      console.error('Toggle failed:', e);
+    }
+  }
+
+  // ===== Realtime =====
+  function connectRealtime(){
+    try{
+      const wsUrl = `${SUPABASE_URL.replace('https','wss')}/realtime/v1/websocket?apikey=${SUPABASE_KEY}&vsn=1.0.0`;
+      ws = new WebSocket(wsUrl);
+      ws.onopen = () => {
+        setLive(true);
+        ws.send(JSON.stringify({
+          topic: 'realtime:public:house_tasks',
+          event: 'phx_join',
+          payload: { config: { broadcast: { self: false }, presence: {}, postgres_changes: [{ event: '*', schema: 'public', table: TABLE }] } },
+          ref: '1'
+        }));
+      };
+      ws.onmessage = (e) => {
+        const msg = JSON.parse(e.data);
+        if(msg.event === 'postgres_changes' || (msg.payload && msg.payload.data)){
+          fetchTasks();
+        }
+        if(msg.event === 'phx_reply' && msg.payload && msg.payload.status === 'ok'){
+          // joined successfully
+        }
+      };
+      ws.onerror = () => setLive(false);
+      ws.onclose = () => {
+        setLive(false);
+        setTimeout(connectRealtime, 5000);
+      };
+    }catch(e){
+      setLive(false);
+    }
+  }
+
+  function setLive(on){
+    const dot = document.getElementById('liveIndicator');
+    const txt = document.getElementById('liveText');
+    if(dot){ dot.className = 'dot' + (on ? '' : ' off'); }
+    if(txt){ txt.textContent = on ? 'Live' : 'Offline'; }
+  }
+
+  // ===== Helpers =====
+  function todayStr(){ return new Date().toISOString().slice(0,10); }
+
+  function daysUntil(dateStr){
+    if(!dateStr) return null;
+    const today = new Date(todayStr() + 'T00:00:00');
+    const due = new Date(dateStr + 'T00:00:00');
+    return Math.round((due - today) / 86400000);
+  }
+
+  function fmtDate(dateStr){
+    if(!dateStr) return '—';
+    const d = new Date(dateStr + 'T00:00:00');
+    return d.toLocaleDateString('en-GB', { day:'numeric', month:'short' });
+  }
+
+  function escHtml(s){
+    const d = document.createElement('div');
+    d.textContent = s || '';
+    return d.innerHTML;
+  }
+
+  function showToast(msg){
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2500);
+  }
+
+  function priorityRank(p){ return { urgent:0, high:1, medium:2, low:3 }[p] ?? 4; }
+
+  // ===== Render =====
+  function render(){
+    const main = document.getElementById('main');
+    main.innerHTML = '';
+
+    let list = tasks.slice();
+    if(ownerFilter === 'jake') list = list.filter(t => t.owner === 'jake' || t.owner === 'both');
+    if(ownerFilter === 'issy') list = list.filter(t => t.owner === 'issy' || t.owner === 'both');
+
+    const active = list.filter(t => !t.done);
+    const done = list.filter(t => t.done);
+
+    // Update header stats
+    let overdueCount = 0;
+    tasks.filter(t => !t.done).forEach(t => { if(t.due_date && daysUntil(t.due_date) < 0) overdueCount++; });
+    document.getElementById('stat-overdue').textContent = overdueCount;
+    document.getElementById('stat-open').textContent = tasks.filter(t => !t.done).length;
+
+    if(active.length === 0 && done.length === 0){
+      main.innerHTML = `<div class="empty"><span class="emoji">✅</span>No tasks yet — tap + to add one</div>`;
+      if(done.length > 0) renderCompleted(main, done);
+      return;
+    }
+
+    // Group active tasks
+    const overdue = active.filter(t => t.due_date && daysUntil(t.due_date) < 0)
+      .sort((a,b) => a.due_date.localeCompare(b.due_date));
+    const thisWeek = active.filter(t => {
+      if(!t.due_date) return false;
+      const d = daysUntil(t.due_date);
+      return d >= 0 && d <= 7;
+    }).sort((a,b) => a.due_date.localeCompare(b.due_date) || priorityRank(a.priority) - priorityRank(b.priority));
+    const comingUp = active.filter(t => {
+      if(!t.due_date) return false;
+      return daysUntil(t.due_date) > 7;
+    }).sort((a,b) => a.due_date.localeCompare(b.due_date) || priorityRank(a.priority) - priorityRank(b.priority));
+    const noDue = active.filter(t => !t.due_date)
+      .sort((a,b) => priorityRank(a.priority) - priorityRank(b.priority));
+
+    if(overdue.length){
+      addSectionHead(main, 'Overdue', overdue.length, true);
+      overdue.forEach(t => main.appendChild(renderCard(t)));
+    }
+    if(thisWeek.length){
+      addSectionHead(main, 'This week', thisWeek.length, false);
+      thisWeek.forEach(t => main.appendChild(renderCard(t)));
+    }
+    if(comingUp.length){
+      addSectionHead(main, 'Coming up', comingUp.length, false);
+      comingUp.forEach(t => main.appendChild(renderCard(t)));
+    }
+    if(noDue.length){
+      addSectionHead(main, 'No due date', noDue.length, false);
+      noDue.forEach(t => main.appendChild(renderCard(t)));
+    }
+    if(active.length === 0){
+      main.innerHTML += `<div class="empty"><span class="emoji">🎉</span>Nothing outstanding!</div>`;
+    }
+
+    if(done.length) renderCompleted(main, done);
+  }
+
+  function addSectionHead(container, label, count, isOverdue){
+    const h = document.createElement('div');
+    h.className = 'section-head' + (isOverdue ? ' overdue' : '');
+    h.innerHTML = `<span class="section-label">${label}</span><span class="section-line"></span><span class="section-count">${count}</span>`;
+    container.appendChild(h);
+  }
+
+  function renderCompleted(container, done){
+    const wrap = document.createElement('div');
+    const btn = document.createElement('button');
+    btn.className = 'completed-toggle';
+    btn.innerHTML = `<span class="cl">Completed</span><span class="section-line" style="flex:1;height:1px;background:var(--line);"></span><span class="cc">${done.length}</span><span class="cchev">${completedExpanded ? '▲' : '▼'}</span>`;
+    btn.addEventListener('click', () => { completedExpanded = !completedExpanded; render(); });
+    wrap.appendChild(btn);
+    if(completedExpanded){
+      const sorted = done.slice().sort((a,b) => (b.done_at || '').localeCompare(a.done_at || ''));
+      sorted.forEach(t => wrap.appendChild(renderCard(t)));
+    }
+    container.appendChild(wrap);
+  }
+
+  function renderCard(t){
+    const card = document.createElement('div');
+    card.className = 'card' + (t.done ? ' done' : '');
+
+    const dd = t.due_date ? daysUntil(t.due_date) : null;
+    const dueClass = (dd !== null && dd < 0 && !t.done) ? 'over' : (dd !== null && dd <= 3 && !t.done ? 'soon' : '');
+    let dueLabel = '';
+    if(t.done) dueLabel = 'Done';
+    else if(dd === null) dueLabel = '';
+    else if(dd === 0) dueLabel = 'Today';
+    else if(dd === 1) dueLabel = 'Tomorrow';
+    else if(dd < 0) dueLabel = Math.abs(dd) + 'd overdue';
+    else dueLabel = 'In ' + dd + 'd';
+
+    const ownerLabel = t.owner === 'jake' ? 'Jake' : t.owner === 'issy' ? 'Issy' : 'Both';
+
+    card.innerHTML = `
+      <div class="card-rail ${t.owner}"></div>
+      <div class="card-check">
+        <div class="ccheck ${t.done ? 'checked' : ''}" data-check="${t.id}">
+          <span class="tick">✓</span>
+        </div>
+      </div>
+      <div class="card-body" data-edit="${t.id}">
+        <div class="card-title">${escHtml(t.title)}</div>
+        ${t.notes ? `<div class="card-notes">${escHtml(t.notes)}</div>` : ''}
+        <div class="card-meta">
+          <span class="owner-chip ${t.owner}"><span class="owner-dot"></span>${ownerLabel}</span>
+          <span class="pchip ${t.priority}">${t.priority}</span>
+        </div>
+      </div>
+      <div class="card-right" data-edit="${t.id}">
+        ${t.due_date ? `<div class="due-date ${dueClass}">${fmtDate(t.due_date)}</div><div class="due-label">${dueLabel}</div>` : ''}
+      </div>
+    `;
+
+    return card;
+  }
+
+  // ===== Click delegation =====
+  document.getElementById('main').addEventListener('click', async (e) => {
+    const checkEl = e.target.closest('[data-check]');
+    const editEl = e.target.closest('[data-edit]');
+
+    if(checkEl){
+      e.stopPropagation();
+      const id = checkEl.getAttribute('data-check');
+      const t = tasks.find(x => x.id === id);
+      if(!t) return;
+      t.done = !t.done;
+      t.done_at = t.done ? new Date().toISOString() : null;
+      render();
+      await toggleDone(id, t.done);
+      showToast(t.done ? '✓ Marked done' : 'Reopened');
+    } else if(editEl){
+      const id = editEl.getAttribute('data-edit');
+      openModal(tasks.find(x => x.id === id));
+    }
+  });
+
+  // ===== Owner filter tabs =====
+  document.querySelectorAll('.otab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.otab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      ownerFilter = tab.getAttribute('data-owner');
+      render();
+    });
+  });
+
+  // ===== Modal =====
+  const overlay = document.getElementById('modalOverlay');
+
+  function openModal(task){
+    editingId = task ? task.id : null;
+    document.getElementById('modalTitle').textContent = task ? 'Edit Task' : 'New Task';
+    document.getElementById('f-title').value = task ? task.title : '';
+    document.getElementById('f-notes').value = task ? (task.notes || '') : '';
+    document.getElementById('f-due').value = task ? (task.due_date || '') : '';
+    selectedOwner = task ? task.owner : 'jake';
+    selectedPriority = task ? task.priority : 'medium';
+    updateOwnerUI();
+    updatePriorityUI();
+    document.getElementById('deleteBtn').style.display = task ? 'block' : 'none';
+    overlay.classList.add('show');
+    setTimeout(() => document.getElementById('f-title').focus(), 100);
+  }
+
+  function closeModal(){
+    overlay.classList.remove('show');
+    editingId = null;
+  }
+
+  function updateOwnerUI(){
+    document.querySelectorAll('.opick').forEach(el => {
+      const o = el.getAttribute('data-o');
+      el.className = 'opick ' + o + (o === selectedOwner ? ' sel-' + o : '');
+    });
+  }
+
+  function updatePriorityUI(){
+    document.querySelectorAll('.ppick').forEach(el => {
+      const p = el.getAttribute('data-p');
+      el.className = 'ppick' + (p === selectedPriority ? ' sel-' + p : '');
+    });
+  }
+
+  document.querySelectorAll('.opick').forEach(el => {
+    el.addEventListener('click', () => { selectedOwner = el.getAttribute('data-o'); updateOwnerUI(); });
+  });
+  document.querySelectorAll('.ppick').forEach(el => {
+    el.addEventListener('click', () => { selectedPriority = el.getAttribute('data-p'); updatePriorityUI(); });
+  });
+
+  document.getElementById('fabBtn').addEventListener('click', () => openModal(null));
+  document.getElementById('modalClose').addEventListener('click', closeModal);
+  document.getElementById('cancelBtn').addEventListener('click', closeModal);
+  overlay.addEventListener('click', (e) => { if(e.target === overlay) closeModal(); });
+
+  document.getElementById('saveBtn').addEventListener('click', async () => {
+    const title = document.getElementById('f-title').value.trim();
+    if(!title){ showToast('Give the task a name first'); return; }
+
+    const task = {
+      title,
+      notes: document.getElementById('f-notes').value.trim() || null,
+      owner: selectedOwner,
+      priority: selectedPriority,
+      due_date: document.getElementById('f-due').value || null,
+      done: false
+    };
+
+    if(editingId){
+      task.id = editingId;
+      const existing = tasks.find(t => t.id === editingId);
+      if(existing) task.done = existing.done;
+    }
+
+    const ok = await upsertTask(task);
+    if(ok){
+      closeModal();
+      showToast(editingId ? '✓ Task updated' : '✓ Task added');
+      await fetchTasks();
+    }
+  });
+
+  document.getElementById('deleteBtn').addEventListener('click', async () => {
+    if(!editingId) return;
+    if(!confirm('Delete this task?')) return;
+    const ok = await deleteTask(editingId);
+    if(ok){
+      closeModal();
+      showToast('Task deleted');
+      await fetchTasks();
+    }
+  });
+
+  // ===== Header date =====
+  function setHeaderDate(){
+    const d = new Date();
+    document.getElementById('headerDate').textContent = d.toLocaleDateString('en-GB', { weekday:'long', day:'numeric', month:'long' });
+  }
+
+  // ===== Init =====
+  setHeaderDate();
+  fetchTasks();
+  connectRealtime();
+})();
+</script>
+
+</body>
+</html>
