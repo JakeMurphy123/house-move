@@ -1108,21 +1108,15 @@
     const input=document.getElementById('wishUrl');
     const url=input.value.trim();
     if(!url){ showToast('Paste a URL first'); return; }
-    let parsed;
-    try{ parsed=new URL(url); }catch(e){ showToast('That doesn\'t look like a valid URL'); return; }
+    try{ new URL(url); }catch(e){ showToast("That doesn't look like a valid URL"); return; }
 
     const btn=document.getElementById('wishAddBtn');
     const txt=document.getElementById('wishBtnText');
-    btn.disabled=true; txt.textContent='Adding…';
-
-    // Optimistic card while scraping
-    const tempId='temp_'+Date.now();
-    items.unshift({id:tempId,url,title:parsed.hostname.replace('www.',''),image:null,price:null});
-    renderItems();
+    btn.disabled=true; txt.textContent='Checking…';
     input.value='';
 
     await scrapeAndSave(url);
-    items=items.filter(x=>x.id!==tempId);
+
     btn.disabled=false; txt.textContent='Add';
   });
 
