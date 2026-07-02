@@ -588,8 +588,8 @@
 
   async function scrapeAndSave(url){
     let title=null, image=null, price=null;
+    let scraped=false;
 
-    // Call edge function with correct headers (no Prefer header - that's for REST API only)
     const edgeHeaders = {
       'apikey': SUPABASE_KEY,
       'Authorization': `Bearer ${SUPABASE_KEY}`,
@@ -597,26 +597,32 @@
     };
 
     try{
-      const r = await fetch(SCRAPE_FN, {
-        method: 'POST',
-        headers: edgeHeaders,
-        body: JSON.stringify({url})
-      });
+      const r = await fetch(SCRAPE_FN, { method:'POST', headers:edgeHeaders, body:JSON.stringify({url}) });
       if(r.ok){
         const d = await r.json();
-        title = d.title || null;
-        image = d.image || null;
-        price = d.price || null;
+        if(d.title||d.image||d.price){
+          title=d.title||null; image=d.image||null; price=d.price||null;
+          scraped=true;
+        }
       }
     }catch(e){ console.error('Scrape failed:', e); }
 
-    if(!title){ try{ title = new URL(url).hostname.replace('www.',''); }catch(e){ title = url; } }
+    // If scraping failed, show manual entry modal
+    if(!scraped){
+      openManualModal(url);
+      return;
+    }
 
-    const item = { url, title, image:image||null, price:price||null, notes:null };
+    // Clean up title
+    if(!title){ try{ title=new URL(url).hostname.replace('www.',''); }catch(e){ title=url; } }
+
+    await saveItem({ url, title, image:image||null, price:price||null });
+  }
+
+  async function saveItem(item){
     try{
       const r = await fetch(ITEMS_API, {method:'POST', headers:H, body:JSON.stringify(item)});
       if(!r.ok) throw new Error(await r.text());
-      // Fetch fresh list without waiting for realtime (which can be slow/unreliable)
       await fetchItems();
       showToast('✓ Item added');
     }catch(e){
@@ -624,6 +630,57 @@
       showToast('Failed to save item');
     }
   }
+
+  // Manual entry modal for when scraping fails
+  function openManualModal(url){
+    let hostname='';
+    try{ hostname=new URL(url).hostname.replace('www.',''); }catch(e){}
+    
+    const overlay=document.createElement('div');
+    overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.7);backdrop-filter:blur(4px);z-index:200;display:flex;align-items:flex-end;justify-content:center;';
+    
+    overlay.innerHTML=`
+      <div style="background:#1F2E40;border:1px solid rgba(255,255,255,0.12);border-radius:24px 24px 0 0;width:100%;max-width:640px;padding:20px 20px 40px;">
+        <div style="width:36px;height:4px;background:rgba(255,255,255,0.15);border-radius:2px;margin:0 auto 16px;"></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;border-bottom:1px solid rgba(255,255,255,0.07);padding-bottom:14px;">
+          <span style="font-size:17px;font-weight:700;">Add item details</span>
+          <button id="manualClose" style="background:rgba(255,255,255,0.08);border:none;color:#8899AA;width:30px;height:30px;border-radius:50%;cursor:pointer;font-size:16px;">&times;</button>
+        </div>
+        <p style="font-size:13px;color:#8899AA;margin:0 0 16px;">We couldn't auto-fetch details from <strong style="color:#F0F4F8;">${hostname}</strong> — just fill in what you know.</p>
+        <div style="display:flex;flex-direction:column;gap:14px;">
+          <div>
+            <label style="font-size:11px;font-weight:700;color:#8899AA;text-transform:uppercase;letter-spacing:0.04em;display:block;margin-bottom:7px;">Product name</label>
+            <input id="m-title" type="text" placeholder="e.g. Border Grand 4-Seater Sofa" style="width:100%;padding:12px 14px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.12);border-radius:10px;color:#F0F4F8;font-family:inherit;font-size:15px;">
+          </div>
+          <div>
+            <label style="font-size:11px;font-weight:700;color:#8899AA;text-transform:uppercase;letter-spacing:0.04em;display:block;margin-bottom:7px;">Price (optional)</label>
+            <input id="m-price" type="text" placeholder="e.g. £1299" style="width:100%;padding:12px 14px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.12);border-radius:10px;color:#F0F4F8;font-family:inherit;font-size:15px;">
+          </div>
+          <div>
+            <label style="font-size:11px;font-weight:700;color:#8899AA;text-transform:uppercase;letter-spacing:0.04em;display:block;margin-bottom:7px;">Image URL (optional)</label>
+            <input id="m-image" type="text" placeholder="Paste image URL or leave blank" style="width:100%;padding:12px 14px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.12);border-radius:10px;color:#F0F4F8;font-family:inherit;font-size:15px;">
+          </div>
+          <button id="manualSave" style="background:linear-gradient(135deg,#00C896,#00A878);color:#0A1A12;border:none;padding:15px;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;margin-top:4px;">Save item</button>
+        </div>
+      </div>`;
+
+    document.body.appendChild(overlay);
+    document.getElementById('m-title').focus();
+
+    document.getElementById('manualClose').addEventListener('click', () => overlay.remove());
+    overlay.addEventListener('click', e => { if(e.target===overlay) overlay.remove(); });
+
+    document.getElementById('manualSave').addEventListener('click', async () => {
+      const t = document.getElementById('m-title').value.trim();
+      if(!t){ showToast('Add a product name'); return; }
+      const p = document.getElementById('m-price').value.trim();
+      const img = document.getElementById('m-image').value.trim();
+      const priceClean = p ? (p.startsWith('£')||p.startsWith('$')||p.startsWith('€') ? p : '£'+p) : null;
+      overlay.remove();
+      await saveItem({ url, title:t, image:img||null, price:priceClean||null });
+    });
+  }
+
 
   // ===== Realtime =====
   function connectRealtime(){
