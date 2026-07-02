@@ -609,24 +609,21 @@
 
     try{
       const r = await fetch(SCRAPE_FN, { method:'POST', headers:edgeHeaders, body:JSON.stringify({url}) });
-      if(r.ok){
-        const d = await r.json();
-        if(d.title||d.image||d.price){
-          title=d.title||null; image=d.image||null; price=d.price||null;
-          scraped=true;
-        }
+      const d = await r.json();
+      // Accept result as long as we got at least a title or image back
+      if(d && (d.title || d.image || d.price)){
+        title=d.title||null; image=d.image||null; price=d.price||null;
+        scraped=true;
       }
     }catch(e){ console.error('Scrape failed:', e); }
 
-    // If scraping failed, show manual entry modal
+    // Always open manual modal if scraping didn't get useful data
     if(!scraped){
       openManualModal(url);
       return;
     }
 
-    // Clean up title
     if(!title){ try{ title=new URL(url).hostname.replace('www.',''); }catch(e){ title=url; } }
-
     await saveItem({ url, title, image:image||null, price:price||null });
   }
 
