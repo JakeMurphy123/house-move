@@ -315,6 +315,18 @@
     gap:8px;
   }
 
+  .item-edit-btn{
+    width:32px; height:32px;
+    border-radius:50%;
+    background:rgba(0,200,150,0.1);
+    border:1px solid rgba(0,200,150,0.2);
+    cursor:pointer;
+    font-size:14px;
+    display:flex; align-items:center; justify-content:center;
+    flex-shrink:0;
+  }
+  .item-edit-btn:active{ transform:scale(0.88); }
+
   .item-delete{
     width:32px; height:32px;
     border-radius:50%;
@@ -928,68 +940,160 @@
   }
 
   function makeItemCard(it){
-    const card=document.createElement('div');
-    card.className='item-card';
-    let hostname='';
-    try{ hostname=new URL(it.url).hostname.replace('www.',''); }catch(e){}
+    const card = document.createElement('div');
+    card.className = 'item-card';
+    let hostname = '';
+    try{ hostname = new URL(it.url).hostname.replace('www.',''); }catch(e){}
 
-    const iconSvg = getItemIcon(it.title, it.url);
-    const imgSection=it.image
-      ?`<div class="item-img-wrap"><img class="item-img" src="${esc(it.image)}" alt="" loading="lazy" onerror="this.parentNode.innerHTML='<div class=\'item-img-placeholder\'>${iconSvg.replace(/\`/g,\'\')}</div>'"></div>`
-      :`<div class="item-img-wrap"><div class="item-img-placeholder">${iconSvg}</div></div>`;
+    // Image section
+    const imgWrap = document.createElement('div');
+    imgWrap.className = 'item-img-wrap';
+    if(it.image){
+      const img = document.createElement('img');
+      img.className = 'item-img';
+      img.src = it.image;
+      img.loading = 'lazy';
+      img.onerror = () => { imgWrap.innerHTML = ''; imgWrap.appendChild(iconEl()); };
+      imgWrap.appendChild(img);
+    } else {
+      imgWrap.appendChild(iconEl());
+    }
+    function iconEl(){ const d = document.createElement('div'); d.className = 'item-img-placeholder'; d.innerHTML = getItemIcon(it.title, it.url); return d; }
 
+    // Price formatted with commas
     const fmtPrice = (p) => {
       if(!p) return null;
       const sym = p.match(/^[£€$]/)?.[0] || '£';
       const num = parseFloat(p.replace(/[^0-9.]/g,''));
-      if(isNaN(num)) return p;
-      return sym + num.toLocaleString('en-GB', {minimumFractionDigits:2, maximumFractionDigits:2});
+      return isNaN(num) ? p : sym + num.toLocaleString('en-GB', {minimumFractionDigits:2, maximumFractionDigits:2});
     };
-    const priceHtml=it.price
-      ?`<span class="item-price">${esc(fmtPrice(it.price))}</span>`
-      :`<span class="item-price no-price" data-edit-price="${it.id}">+ Add price</span>`;
 
-    card.innerHTML=`
-      ${imgSection}
-      <div class="item-body">
-        <div class="item-title">${esc(it.title||hostname)}</div>
-        <div class="item-meta">${priceHtml}<span class="item-source">${esc(hostname)}</span></div>
-      </div>
-      <div class="item-right">
-        <button class="item-delete" data-del="${it.id}">✕</button>
-      </div>`;
+    // Build card body
+    const body = document.createElement('div');
+    body.className = 'item-body';
 
-    card.querySelector('.item-body').addEventListener('click', e=>{
-      if(e.target.closest('[data-edit-price]')) return;
-      window.open(it.url,'_blank','noopener');
-    });
-    card.querySelector('.item-img-wrap').addEventListener('click', ()=>window.open(it.url,'_blank','noopener'));
+    const titleEl = document.createElement('div');
+    titleEl.className = 'item-title';
+    titleEl.textContent = it.title || hostname;
 
-    const priceEl=card.querySelector('[data-edit-price]');
-    if(priceEl){
-      priceEl.addEventListener('click', async e=>{
-        e.stopPropagation();
-        const val=prompt('Enter the price (e.g. 299.99):');
-        if(!val||!val.trim()) return;
-        const raw=val.trim().replace(/[^0-9.]/g,'');
-        const cleaned='£'+parseFloat(raw).toFixed(2);
-        try{
-          await fetch(`${ITEMS_API}?id=eq.${it.id}`,{method:'PATCH',headers:H,body:JSON.stringify({price:cleaned})});
-          it.price=cleaned; renderItems(); showToast('Price saved');
-        }catch(e){ showToast('Could not save price'); }
-      });
-    }
+    const meta = document.createElement('div');
+    meta.className = 'item-meta';
 
-    card.querySelector('[data-del]').addEventListener('click', async e=>{
+    const priceEl = document.createElement('span');
+    priceEl.className = it.price ? 'item-price' : 'item-price no-price';
+    priceEl.textContent = it.price ? fmtPrice(it.price) : '+ Add price';
+
+    const sourceEl = document.createElement('span');
+    sourceEl.className = 'item-source';
+    sourceEl.textContent = hostname;
+
+    meta.appendChild(priceEl);
+    meta.appendChild(sourceEl);
+    body.appendChild(titleEl);
+    body.appendChild(meta);
+
+    // Right side: edit + delete buttons
+    const right = document.createElement('div');
+    right.className = 'item-right';
+
+    const editBtn = document.createElement('button');
+    editBtn.className = 'item-edit-btn';
+    editBtn.title = 'Edit details';
+    editBtn.textContent = '✏️';
+
+    const delBtn = document.createElement('button');
+    delBtn.className = 'item-delete';
+    delBtn.title = 'Remove';
+    delBtn.textContent = '✕';
+
+    right.appendChild(editBtn);
+    right.appendChild(delBtn);
+
+    card.appendChild(imgWrap);
+    card.appendChild(body);
+    card.appendChild(right);
+
+    // Click image or title to open URL
+    imgWrap.addEventListener('click', () => window.open(it.url, '_blank', 'noopener'));
+    titleEl.addEventListener('click', () => window.open(it.url, '_blank', 'noopener'));
+    sourceEl.addEventListener('click', () => window.open(it.url, '_blank', 'noopener'));
+    priceEl.addEventListener('click', e => { e.stopPropagation(); openEditModal(it); });
+
+    // Edit button
+    editBtn.addEventListener('click', e => { e.stopPropagation(); openEditModal(it); });
+
+    // Delete button
+    delBtn.addEventListener('click', async e => {
       e.stopPropagation();
       if(!confirm('Remove this item?')) return;
-      const ok=await deleteItem(it.id);
-      if(ok){ items=items.filter(x=>x.id!==it.id); renderItems(); showToast('Removed'); }
+      const ok = await deleteItem(it.id);
+      if(ok){ items = items.filter(x => x.id !== it.id); renderItems(); showToast('Removed'); }
     });
 
     return card;
   }
 
+  function openEditModal(it){
+    let hostname = '';
+    try{ hostname = new URL(it.url).hostname.replace('www.',''); }catch(e){}
+
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);backdrop-filter:blur(4px);z-index:200;display:flex;align-items:flex-end;justify-content:center;';
+
+    const sheet = document.createElement('div');
+    sheet.style.cssText = 'background:#1F2E40;border:1px solid rgba(255,255,255,0.12);border-radius:24px 24px 0 0;width:100%;max-width:640px;padding:20px 20px 40px;';
+    sheet.innerHTML = `
+      <div style="width:36px;height:4px;background:rgba(255,255,255,0.15);border-radius:2px;margin:0 auto 16px;"></div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;border-bottom:1px solid rgba(255,255,255,0.07);padding-bottom:14px;">
+        <span style="font-size:17px;font-weight:700;color:#F0F4F8;">Edit item</span>
+        <button id="editClose" style="background:rgba(255,255,255,0.08);border:none;color:#8899AA;width:32px;height:32px;border-radius:50%;cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;">&times;</button>
+      </div>
+      <p style="font-size:12px;color:#8899AA;margin:0 0 16px;">From: <strong style="color:#F0F4F8;">${hostname}</strong></p>
+      <div style="display:flex;flex-direction:column;gap:14px;">
+        <div>
+          <label style="font-size:11px;font-weight:700;color:#8899AA;text-transform:uppercase;letter-spacing:0.04em;display:block;margin-bottom:7px;">Product name</label>
+          <input id="e-title" type="text" style="width:100%;padding:12px 14px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.12);border-radius:10px;color:#F0F4F8;font-family:inherit;font-size:15px;box-sizing:border-box;">
+        </div>
+        <div>
+          <label style="font-size:11px;font-weight:700;color:#8899AA;text-transform:uppercase;letter-spacing:0.04em;display:block;margin-bottom:7px;">Price (e.g. 1299)</label>
+          <input id="e-price" type="text" style="width:100%;padding:12px 14px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.12);border-radius:10px;color:#F0F4F8;font-family:inherit;font-size:15px;box-sizing:border-box;">
+        </div>
+        <div>
+          <label style="font-size:11px;font-weight:700;color:#8899AA;text-transform:uppercase;letter-spacing:0.04em;display:block;margin-bottom:7px;">Image — right-click product photo → Copy image address</label>
+          <input id="e-image" type="text" placeholder="Paste image URL here" style="width:100%;padding:12px 14px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.12);border-radius:10px;color:#F0F4F8;font-family:inherit;font-size:14px;box-sizing:border-box;">
+        </div>
+        <button id="editSave" style="background:linear-gradient(135deg,#00C896,#00A878);color:#0A1A12;border:none;padding:15px;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;">Save</button>
+      </div>`;
+
+    overlay.appendChild(sheet);
+    document.body.appendChild(overlay);
+
+    // Set values after adding to DOM
+    document.getElementById('e-title').value = it.title || '';
+    document.getElementById('e-price').value = it.price ? it.price.replace(/[£€$]/,'') : '';
+    document.getElementById('e-image').value = it.image || '';
+    setTimeout(() => document.getElementById('e-title').focus(), 100);
+
+    document.getElementById('editClose').addEventListener('click', () => overlay.remove());
+    overlay.addEventListener('click', e => { if(e.target === overlay) overlay.remove(); });
+
+    document.getElementById('editSave').addEventListener('click', async () => {
+      const title = document.getElementById('e-title').value.trim();
+      if(!title){ showToast('Product name is required'); return; }
+      const rawPrice = document.getElementById('e-price').value.trim().replace(/[^0-9.]/g,'');
+      const price = rawPrice ? '£' + parseFloat(rawPrice).toFixed(2) : null;
+      const image = document.getElementById('e-image').value.trim() || null;
+      try{
+        await fetch(`${ITEMS_API}?id=eq.${it.id}`, {method:'PATCH', headers:H, body:JSON.stringify({title, price, image})});
+        it.title = title; it.price = price; it.image = image;
+        overlay.remove();
+        renderItems();
+        showToast('✓ Saved');
+      }catch(e){ showToast('Could not save'); }
+    });
+  }
+
+  // ===== EVENT HANDLERS =====
   // ===== EVENT HANDLERS =====
   document.getElementById('tasksMain').addEventListener('click',async e=>{
     const chk=e.target.closest('[data-check]'), edt=e.target.closest('[data-edit]');
