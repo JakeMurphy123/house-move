@@ -673,6 +673,8 @@
       </div>`;
 
     document.body.appendChild(overlay);
+    const sheet = overlay.querySelector('div');
+    sheet.addEventListener('click', e => e.stopPropagation());
     document.getElementById('m-title').focus();
 
     document.getElementById('manualClose').addEventListener('click', () => overlay.remove());
@@ -1073,6 +1075,7 @@
 
     document.getElementById('editClose').addEventListener('click', () => overlay.remove());
     overlay.addEventListener('click', e => { if(e.target === overlay) overlay.remove(); });
+    sheet.addEventListener('click', e => e.stopPropagation());
 
     document.getElementById('editSave').addEventListener('click', async () => {
       const title = document.getElementById('e-title').value.trim();
