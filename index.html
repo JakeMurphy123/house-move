@@ -283,31 +283,13 @@
   }
   .item-price.no-price{ color:var(--text3); font-size:11px; font-weight:500; }
 
-  .item-footer{
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    padding:8px 10px;
-    border-top:1px solid var(--border);
-  }
-
   .item-source{
     font-size:10px;
     color:var(--text3);
     overflow:hidden;
     text-overflow:ellipsis;
     white-space:nowrap;
-    max-width:70%;
   }
-
-  .item-link{
-    font-size:11px;
-    font-weight:700;
-    color:var(--issy);
-    text-decoration:none;
-    flex-shrink:0;
-  }
-  .item-link:hover{ opacity:0.8; }
 
   .item-delete{
     position:absolute;
@@ -582,14 +564,35 @@
   }
 
   async function scrapeAndSave(url){
-    // Call edge function to scrape metadata
     let title=null, image=null, price=null;
+
+    // Use microlink.io — purpose-built link preview API, handles anti-bot on major retailers
     try{
-      const r=await fetch(SCRAPE_FN,{method:'POST',headers:{...H,'Authorization':`Bearer ${SUPABASE_KEY}`},body:JSON.stringify({url})});
-      if(r.ok){ const d=await r.json(); title=d.title; image=d.image; price=d.price; }
+      const r=await fetch(`https://api.microlink.io?url=${encodeURIComponent(url)}&palette=false&audio=false&video=false&iframe=false`,{headers:{'x-api-key':''}});
+      if(r.ok){
+        const d=await r.json();
+        const data=d.data||{};
+        title=data.title||data.description||null;
+        image=data.image?.url||data.logo?.url||null;
+        // microlink returns price in data.price or structured data
+        price=data.price||null;
+        if(price&&typeof price==='object') price=price.amount?`£${parseFloat(price.amount).toFixed(2)}`:null;
+      }
     }catch(e){}
 
-    // Fallback: use hostname as title
+    // Fallback to our edge function if microlink didn't get image/price
+    if(!image||!price){
+      try{
+        const r=await fetch(SCRAPE_FN,{method:'POST',headers:{...H},body:JSON.stringify({url})});
+        if(r.ok){
+          const d=await r.json();
+          if(!title) title=d.title;
+          if(!image) image=d.image;
+          if(!price) price=d.price;
+        }
+      }catch(e){}
+    }
+
     if(!title){ try{ title=new URL(url).hostname.replace('www.',''); }catch(e){ title=url; } }
 
     const item={ url, title, image:image||null, price:price||null, notes:null };
@@ -749,6 +752,7 @@
   function makeItemCard(it){
     const card=document.createElement('div');
     card.className='item-card';
+    card.addEventListener('click', () => window.open(it.url, '_blank', 'noopener'));
 
     let hostname='';
     try{ hostname=new URL(it.url).hostname.replace('www.',''); }catch(e){}
@@ -760,17 +764,14 @@
 
     const priceHtml=it.price
       ?`<div class="item-price">${esc(it.price)}</div>`
-      :`<div class="item-price no-price">Price not found</div>`;
+      :`<div class="item-price no-price">Price unavailable</div>`;
 
     card.innerHTML=`
       ${imgHtml}
       <div class="item-body">
         <div class="item-title">${esc(it.title||hostname)}</div>
         ${priceHtml}
-      </div>
-      <div class="item-footer">
-        <span class="item-source">${esc(hostname)}</span>
-        <a class="item-link" href="${esc(it.url)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">View →</a>
+        <div class="item-source" style="font-size:10px;color:var(--text3);margin-top:4px;">${esc(hostname)}</div>
       </div>
       <button class="item-delete" data-del="${it.id}" onclick="event.stopPropagation()">✕</button>`;
     return card;
