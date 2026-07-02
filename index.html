@@ -783,7 +783,22 @@
         ${priceHtml}
         <div class="item-source" style="font-size:10px;color:var(--text3);margin-top:4px;">${esc(hostname)}</div>
       </div>
-      <button class="item-delete" data-del="${it.id}" onclick="event.stopPropagation()">✕</button>`;
+      <button class="item-delete" data-del="${it.id}">✕</button>`;
+
+    // Whole card opens URL, but not if delete was clicked
+    card.addEventListener('click', e => {
+      if(e.target.closest('[data-del]')) return;
+      window.open(it.url, '_blank', 'noopener');
+    });
+
+    // Delete button
+    card.querySelector('[data-del]').addEventListener('click', async e => {
+      e.stopPropagation();
+      if(!confirm('Remove this item?')) return;
+      const ok = await deleteItem(it.id);
+      if(ok){ items=items.filter(x=>x.id!==it.id); renderItems(); showToast('Removed'); }
+    });
+
     return card;
   }
 
@@ -797,16 +812,6 @@
       renderTasks(); await toggleDone(id,t.done);
       showToast(t.done?'✓ Done!':'Reopened');
     } else if(edt){ openModal(tasks.find(x=>x.id===edt.getAttribute('data-edit'))); }
-  });
-
-  document.getElementById('itemsContainer').addEventListener('click',async e=>{
-    const del=e.target.closest('[data-del]');
-    if(del){
-      e.stopPropagation();
-      if(!confirm('Remove this item?')) return;
-      const ok=await deleteItem(del.getAttribute('data-del'));
-      if(ok){ items=items.filter(x=>x.id!==del.getAttribute('data-del')); renderItems(); showToast('Removed'); }
-    }
   });
 
   // Wishlist add
