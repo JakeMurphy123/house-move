@@ -589,47 +589,40 @@
   async function scrapeAndSave(url){
     let title=null, image=null, price=null;
 
-    // Step 1: microlink.io GET (no CORS issues, free, runs real Chrome)
-    try{
-      const r = await fetch(`https://api.microlink.io?url=${encodeURIComponent(url)}`);
-      if(r.ok){
-        const d = await r.json();
-        if(d.status === 'success'){
-          const data = d.data || {};
-          title = data.title || null;
-          image = data.image?.url || null;
-          // microlink doesn't return price — we get that from the edge function
-        }
-      }
-    }catch(e){ console.log('microlink failed:', e); }
+    // Call edge function with correct headers (no Prefer header - that's for REST API only)
+    const edgeHeaders = {
+      'apikey': SUPABASE_KEY,
+      'Authorization': `Bearer ${SUPABASE_KEY}`,
+      'Content-Type': 'application/json'
+    };
 
-    // Step 2: Edge function for price (direct page scrape)
     try{
       const r = await fetch(SCRAPE_FN, {
-        method:'POST',
-        headers: { ...H },
+        method: 'POST',
+        headers: edgeHeaders,
         body: JSON.stringify({url})
       });
       if(r.ok){
         const d = await r.json();
-        if(!title) title = d.title;
-        if(!image) image = d.image;
-        if(!price) price = d.price;
+        title = d.title || null;
+        image = d.image || null;
+        price = d.price || null;
       }
-    }catch(e){ console.log('edge fn failed:', e); }
+    }catch(e){ console.error('Scrape failed:', e); }
 
-    // Fallback title from hostname
     if(!title){ try{ title = new URL(url).hostname.replace('www.',''); }catch(e){ title = url; } }
-    // Strip site suffix (e.g. " - IKEA UK")
-    title = title?.replace(/\s*[\|\-–—]\s*.+$/, '')?.replace(/&amp;/g,'&')?.trim()?.slice(0,120) || title;
 
     const item = { url, title, image:image||null, price:price||null, notes:null };
     try{
       const r = await fetch(ITEMS_API, {method:'POST', headers:H, body:JSON.stringify(item)});
-      if(!r.ok) throw new Error();
+      if(!r.ok) throw new Error(await r.text());
+      // Fetch fresh list without waiting for realtime (which can be slow/unreliable)
       await fetchItems();
       showToast('✓ Item added');
-    }catch(e){ showToast('Failed to save item'); }
+    }catch(e){
+      console.error('Save failed:', e);
+      showToast('Failed to save item');
+    }
   }
 
   // ===== Realtime =====
@@ -639,7 +632,15 @@
       ws.onopen=()=>{ setLive(true);
         ['house_tasks','house_items'].forEach((t,i)=>ws.send(JSON.stringify({topic:`realtime:public:${t}`,event:'phx_join',payload:{config:{broadcast:{self:false},presence:{},postgres_changes:[{event:'*',schema:'public',table:t}]}},ref:String(i+1)})));
       };
-      ws.onmessage=e=>{ const m=JSON.parse(e.data); if(m.event==='postgres_changes'||(m.payload&&m.payload.data)){ fetchTasks(); fetchItems(); } };
+      ws.onmessage=e=>{
+        const m=JSON.parse(e.data);
+        if(m.event==='postgres_changes'||(m.payload&&m.payload.data)){
+          const tbl=m.payload?.data?.table||m.topic||'';
+          if(tbl.includes('house_tasks')) fetchTasks();
+          else if(tbl.includes('house_items')) fetchItems();
+          else { fetchTasks(); fetchItems(); }
+        }
+      };
       ws.onerror=()=>setLive(false);
       ws.onclose=()=>{ setLive(false); setTimeout(connectRealtime,5000); };
     }catch(e){ setLive(false); }
