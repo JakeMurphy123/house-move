@@ -589,48 +589,43 @@
   async function scrapeAndSave(url){
     let title=null, image=null, price=null;
 
-    // microlink.io - runs real headless Chrome, works on IKEA/JL/Dunelm etc.
+    // Step 1: microlink.io GET (no CORS issues, free, runs real Chrome)
     try{
-      const mlUrl=`https://api.microlink.io?url=${encodeURIComponent(url)}&palette=false&audio=false&video=false&iframe=false`;
-      const r=await fetch(mlUrl);
+      const r = await fetch(`https://api.microlink.io?url=${encodeURIComponent(url)}`);
       if(r.ok){
-        const d=await r.json();
-        const data=d.data||{};
-        title=data.title||null;
-        image=data.image?.url||null;
-        // microlink doesn't return price by default — extract from description or publisher
-        // We'll try a second call with CSS selectors for price
-      }
-    }catch(e){}
-
-    // Try to get price via microlink data selector (works on most retail sites)
-    if(!price){
-      try{
-        const priceSelectors=[
-          // Common price selectors across IKEA, JL, Dunelm, Next, M&S etc.
-          '[class*="price"],[data-testid*="price"],[itemprop="price"],[class*="Price"],[id*="price"]'
-        ];
-        const mlPriceUrl=`https://api.microlink.io?url=${encodeURIComponent(url)}&data.price.selector=${encodeURIComponent(priceSelectors[0])}&data.price.attr=text&data.price.type=string`;
-        const r=await fetch(mlPriceUrl);
-        if(r.ok){
-          const d=await r.json();
-          let raw=d.data?.price;
-          if(raw){
-            // Extract first £/€/$ amount from the text
-            const match=raw.match(/[£€$]\s*[\d,]+\.?\d*/);
-            if(match) price=match[0].replace(/\s/g,'');
-          }
+        const d = await r.json();
+        if(d.status === 'success'){
+          const data = d.data || {};
+          title = data.title || null;
+          image = data.image?.url || null;
+          // microlink doesn't return price — we get that from the edge function
         }
-      }catch(e){}
-    }
+      }
+    }catch(e){ console.log('microlink failed:', e); }
 
-    if(!title){ try{ title=new URL(url).hostname.replace('www.',''); }catch(e){ title=url; } }
-    // Clean title — strip site name suffix
-    title=title?.replace(/\s*[\|\-–—]\s*.+$/, '')?.replace(/&amp;/g,'&')?.trim()?.slice(0,120)||title;
-
-    const item={ url, title, image:image||null, price:price||null, notes:null };
+    // Step 2: Edge function for price (direct page scrape)
     try{
-      const r=await fetch(ITEMS_API,{method:'POST',headers:H,body:JSON.stringify(item)});
+      const r = await fetch(SCRAPE_FN, {
+        method:'POST',
+        headers: { ...H },
+        body: JSON.stringify({url})
+      });
+      if(r.ok){
+        const d = await r.json();
+        if(!title) title = d.title;
+        if(!image) image = d.image;
+        if(!price) price = d.price;
+      }
+    }catch(e){ console.log('edge fn failed:', e); }
+
+    // Fallback title from hostname
+    if(!title){ try{ title = new URL(url).hostname.replace('www.',''); }catch(e){ title = url; } }
+    // Strip site suffix (e.g. " - IKEA UK")
+    title = title?.replace(/\s*[\|\-–—]\s*.+$/, '')?.replace(/&amp;/g,'&')?.trim()?.slice(0,120) || title;
+
+    const item = { url, title, image:image||null, price:price||null, notes:null };
+    try{
+      const r = await fetch(ITEMS_API, {method:'POST', headers:H, body:JSON.stringify(item)});
       if(!r.ok) throw new Error();
       await fetchItems();
       showToast('✓ Item added');
